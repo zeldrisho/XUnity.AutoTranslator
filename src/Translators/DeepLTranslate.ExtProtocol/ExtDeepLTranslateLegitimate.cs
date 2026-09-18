@@ -79,6 +79,10 @@ namespace DeepLTranslate.ExtProtocol
          CreateClientAndHandler();
       }
 
+      /// <summary>
+      /// Initializes the DeepL client settings from the serialized endpoint configuration.
+      /// </summary>
+      /// <param name="config">The API key and account type supplied by the parent process.</param>
       public void Initialize( string config )
       {
          var parts = config.Split( new[] { '\n' }, StringSplitOptions.None );
@@ -114,6 +118,11 @@ namespace DeepLTranslate.ExtProtocol
          _client.DefaultRequestHeaders.Accept.Add( new MediaTypeWithQualityHeaderValue( "*/*" ) );
       }
 
+      /// <summary>
+      /// Normalizes language aliases for the DeepL API.
+      /// </summary>
+      /// <param name="lang">The configured language code.</param>
+      /// <returns>The language code accepted by DeepL.</returns>
       private static string FixLanguage( string lang )
       {
          switch( lang )
@@ -126,6 +135,10 @@ namespace DeepLTranslate.ExtProtocol
          }
       }
 
+      /// <summary>
+      /// Refreshes the cached DeepL language capabilities and validates the requested language pair.
+      /// </summary>
+      /// <param name="context">The translation request whose languages must be supported.</param>
       private async Task EnsureLanguagesAsync( ITranslationContext context )
       {
          await _languagesSemaphore.WaitAsync();
@@ -164,6 +177,10 @@ namespace DeepLTranslate.ExtProtocol
             throw new Exception( $"DeepL does not support '{context.DestinationLanguage}' as a target language." );
       }
 
+      /// <summary>
+      /// Translates the source texts in the supplied context with the authenticated DeepL API.
+      /// </summary>
+      /// <param name="context">The translation request to process and complete.</param>
       public async Task Translate( ITranslationContext context )
       {
          await EnsureLanguagesAsync( context );
@@ -234,6 +251,9 @@ namespace DeepLTranslate.ExtProtocol
          context.Complete( translatedTexts.ToArray() );
       }
 
+      /// <summary>
+      /// Releases the HTTP client and language-cache synchronization resources.
+      /// </summary>
       public void Dispose()
       {
          _client?.Dispose();

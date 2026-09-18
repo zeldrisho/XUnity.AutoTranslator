@@ -64,6 +64,10 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          return OverrideFontTextMeshPro;
       }
 
+      /// <summary>
+      /// Gets the cached TextMesh Pro fallback or creates it from the configured system font.
+      /// </summary>
+      /// <returns>The fallback font asset, or <see langword="null"/> when it cannot be created.</returns>
       public static UnityEngine.Object GetOrCreateFallbackSystemFontTextMeshPro()
       {
          if( _hasReadFallbackSystemFont ) return FallbackSystemFontTextMeshPro;
@@ -108,6 +112,9 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
       }
 
+      /// <summary>
+      /// Adds the configured system font asset to TextMesh Pro's global fallback list.
+      /// </summary>
       public static void RegisterFallbackSystemFontTextMeshPro()
       {
          var font = GetOrCreateFallbackSystemFontTextMeshPro();

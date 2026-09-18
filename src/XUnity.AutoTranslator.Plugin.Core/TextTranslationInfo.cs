@@ -71,6 +71,11 @@ namespace XUnity.AutoTranslator.Plugin.Core
          TranslatedText = translatedText;
       }
 
+      /// <summary>
+      /// Attaches the configured system fallback when a TextMesh Pro font lacks translated characters.
+      /// </summary>
+      /// <param name="ui">The text component whose active font is inspected.</param>
+      /// <param name="text">The translated text whose characters must be supported.</param>
       public void EnsureTextMeshProFallback( object ui, string text )
       {
          if( ui == null || string.IsNullOrEmpty( text ) || string.IsNullOrWhiteSpace( Settings.FallbackSystemFontName ) ) return;
