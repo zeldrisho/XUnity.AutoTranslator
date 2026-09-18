@@ -53,6 +53,9 @@ namespace DeepLTranslate.ExtProtocol
          public bool usable_as_target { get; set; }
       }
 
+      /// <summary>
+      /// Enables the SSL and TLS protocol versions supported by the external DeepL process.
+      /// </summary>
       static ExtDeepLTranslateLegitimate()
       {
          ServicePointManager.SecurityProtocol |=
@@ -74,6 +77,9 @@ namespace DeepLTranslate.ExtProtocol
       private HttpClientHandler _handler;
       private string _apiKey;
 
+      /// <summary>
+      /// Creates an authenticated DeepL endpoint with a configured HTTP client.
+      /// </summary>
       public ExtDeepLTranslateLegitimate()
       {
          CreateClientAndHandler();
@@ -102,6 +108,9 @@ namespace DeepLTranslate.ExtProtocol
          }
       }
 
+      /// <summary>
+      /// Recreates the HTTP client and applies the headers required by DeepL.
+      /// </summary>
       private void CreateClientAndHandler()
       {
          if( _client != null )
@@ -215,6 +224,12 @@ namespace DeepLTranslate.ExtProtocol
          ExtractTranslation( str, untranslatedTextInfos, context );
       }
 
+      /// <summary>
+      /// Extracts translated strings from a DeepL response and completes the translation context.
+      /// </summary>
+      /// <param name="data">The serialized DeepL response.</param>
+      /// <param name="untranslatedTextInfos">The source text entries corresponding to the response.</param>
+      /// <param name="context">The translation request to complete.</param>
       private void ExtractTranslation( string data, List<UntranslatedTextInfo> untranslatedTextInfos, ITranslationContext context )
       {
          var obj = JsonConvert.DeserializeObject<TranslationResponse>( data );

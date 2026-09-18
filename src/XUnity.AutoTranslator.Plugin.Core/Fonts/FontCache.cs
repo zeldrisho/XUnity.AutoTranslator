@@ -22,6 +22,11 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
       private static bool _hasReadFallbackSystemFont;
       private static UnityEngine.Object FallbackSystemFontTextMeshPro;
 
+      /// <summary>
+      /// Gets a cached default text font for the requested size or creates one.
+      /// </summary>
+      /// <param name="size">The desired font size.</param>
+      /// <returns>The cached or newly created font.</returns>
       public static Font GetOrCreate( int size )
       {
          if( !CachedFonts.TryGetValue( size, out Font font ) )
@@ -32,6 +37,10 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          return font;
       }
 
+      /// <summary>
+      /// Gets the cached TextMesh Pro override font or loads it from configuration.
+      /// </summary>
+      /// <returns>The configured override font asset, or <see langword="null"/> when loading fails.</returns>
       public static object GetOrCreateOverrideFontTextMeshPro()
       {
          if( !_hasReadOverrideFontTextMeshPro )
@@ -137,6 +146,10 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
       }
 
+      /// <summary>
+      /// Gets the cached TextMesh Pro fallback font or loads it from configuration.
+      /// </summary>
+      /// <returns>The configured fallback font asset, or <see langword="null"/> when loading fails.</returns>
       public static UnityEngine.Object GetOrCreateFallbackFontTextMeshPro()
       {
          if( !_hasReadFallbackFontTextMeshPro )

@@ -169,6 +169,9 @@ namespace XUnity.AutoTranslator.Plugin.Core.Configuration
       public static int MaxClipboardCopyCharacters;
       public static float ClipboardDebounceTime;
 
+      /// <summary>
+      /// Loads plugin settings from the current environment and applies required migrations and limits.
+      /// </summary>
       public static void Configure()
       {
          try

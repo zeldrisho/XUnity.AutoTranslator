@@ -66,6 +66,10 @@ namespace XUnity.AutoTranslator.Plugin.Core
          OriginalText = newText;
       }
 
+      /// <summary>
+      /// Records the translated text and marks this component as translated.
+      /// </summary>
+      /// <param name="translatedText">The translated value assigned to the component.</param>
       public void SetTranslatedText( string translatedText )
       {
          IsTranslated = true;
@@ -125,6 +129,10 @@ namespace XUnity.AutoTranslator.Plugin.Core
          }
       }
 
+      /// <summary>
+      /// Restarts the component's typewriter effect after translated text is assigned.
+      /// </summary>
+      /// <param name="ui">The text component whose typewriter effect should restart.</param>
       public void ResetScrollIn( object ui )
       {
          if( !_hasCheckedTypeWriter )
