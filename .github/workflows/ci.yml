@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build and test
+    name: Build, test, and package
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -37,7 +37,7 @@ jobs:
         shell: pwsh
         run: dotnet restore XUnity.AutoTranslator.sln
 
-      - name: Build solution with Visual Studio MSBuild
+      - name: Build release packages with Visual Studio MSBuild
         shell: pwsh
         run: |
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
@@ -45,7 +45,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($msbuild) -or -not (Test-Path -LiteralPath $msbuild)) {
             throw 'Visual Studio MSBuild was not found.'
           }
-          & $msbuild XUnity.AutoTranslator.sln /m:1 /t:Build /p:Configuration=Debug /p:Platform='Any CPU'
+          & $msbuild XUnity.AutoTranslator.sln /m:1 /t:Build /p:Configuration=Release /p:Platform='Any CPU'
           if ($LASTEXITCODE -ne 0) {
             throw "MSBuild failed with exit code $LASTEXITCODE."
           }
@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         run: >-
           dotnet test test/XUnity.Common.Tests/XUnity.Common.Tests.csproj
-          --configuration Debug
+          --configuration Release
           --no-build
           --no-restore
           --filter FullyQualifiedName~StringExtensionTests
@@ -63,17 +63,98 @@ jobs:
         shell: pwsh
         run: >-
           dotnet test test/XUnity.AutoTranslator.Plugin.Core.Tests/XUnity.AutoTranslator.Plugin.Core.Tests.csproj
-          --configuration Debug
+          --configuration Release
           --no-build
           --no-restore
           --filter FullyQualifiedName~TemplatedStringTests
 
-      - name: Upload debug build artifact
+      - name: Read package versions
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content Directory.Build.props -Raw
+          $version = $props.SelectSingleNode('/Project/PropertyGroup/Version').InnerText
+          $redirector = $props.SelectSingleNode('/Project/PropertyGroup/VersionRedirector').InnerText
+          if ([string]::IsNullOrWhiteSpace($version) -or [string]::IsNullOrWhiteSpace($redirector)) {
+            throw 'Could not determine package versions from Directory.Build.props.'
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VERSION_REDIRECTOR=$redirector" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # Upload each existing ZIP directly, without wrapping it in another ZIP.
+      # With archive: false, the filename is also the artifact name.
+      - name: Upload BepInEx package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: XUnity.AutoTranslator-debug-${{ github.sha }}
-          path: |
-            dist/**
-            src/**/bin/Debug/**
+          path: dist/XUnity.AutoTranslator-BepInEx-${{ env.VERSION }}.zip
+          archive: false
           if-no-files-found: error
-          retention-days: 7
+
+      - name: Upload BepInEx IL2CPP package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-BepInEx-IL2CPP-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload Developer package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-Developer-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload Developer IL2CPP package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-Developer-IL2CPP-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload IPA package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-IPA-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload MelonMod package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-MelonMod-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload MelonMod IL2CPP package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-MelonMod-IL2CPP-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload ReiPatcher package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-ReiPatcher-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload UnityInjector package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.AutoTranslator-UnityInjector-${{ env.VERSION }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload ResourceRedirector BepInEx package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.ResourceRedirector-BepInEx-${{ env.VERSION_REDIRECTOR }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload ResourceRedirector BepInEx IL2CPP package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/XUnity.ResourceRedirector-BepInEx-IL2CPP-${{ env.VERSION_REDIRECTOR }}.zip
+          archive: false
+          if-no-files-found: error
