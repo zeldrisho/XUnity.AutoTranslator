@@ -29,7 +29,11 @@ namespace XUnity.AutoTranslator.Plugin.Core.Web
             var request = sender as HttpWebRequest;
             if( request != null )
             {
-               return _hosts.Contains( request.Address.Host );
+               // Keep the legacy host registration API for compatibility, but never
+               // accept an invalid certificate. The platform's normal certificate
+               // validation remains authoritative for every endpoint.
+               return _hosts.Contains( request.Address.Host )
+                  && sslPolicyErrors == SslPolicyErrors.None;
             }
             return false;
          };
