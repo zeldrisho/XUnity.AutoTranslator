@@ -13,6 +13,7 @@ using XUnity.AutoTranslator.Plugin.Utilities;
 using XUnity.Common.Constants;
 using XUnity.Common.Extensions;
 using XUnity.Common.Harmony;
+using XUnity.Common.Logging;
 using XUnity.Common.Utilities;
 
 namespace XUnity.AutoTranslator.Plugin.Core
@@ -78,7 +79,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
       /// <param name="text">The translated text whose characters must be supported.</param>
       public void EnsureTextMeshProFallback( object ui, string text )
       {
-         if( ui == null || string.IsNullOrEmpty( text ) || string.IsNullOrWhiteSpace( Settings.FallbackSystemFontName ) ) return;
+         if( ui == null || string.IsNullOrEmpty( text ) || Settings.FallbackSystemFontName.IsNullOrWhiteSpace() ) return;
 
          var type = ui.GetUnityType();
          if( ( UnityTypes.TextMeshPro == null || !UnityTypes.TextMeshPro.IsAssignableFrom( type ) )

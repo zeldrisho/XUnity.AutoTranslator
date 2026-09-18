@@ -7,6 +7,7 @@ using System.Text;
 using UnityEngine;
 using XUnity.AutoTranslator.Plugin.Core.Configuration;
 using XUnity.Common.Constants;
+using XUnity.Common.Extensions;
 using XUnity.Common.Logging;
 
 namespace XUnity.AutoTranslator.Plugin.Core.Fonts
@@ -73,7 +74,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          if( _hasReadFallbackSystemFont ) return FallbackSystemFontTextMeshPro;
          _hasReadFallbackSystemFont = true;
 
-         if( string.IsNullOrWhiteSpace( Settings.FallbackSystemFontName ) || UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont == null )
+         if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont == null )
             return null;
 
          try
