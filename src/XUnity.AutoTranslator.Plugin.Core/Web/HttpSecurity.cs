@@ -26,16 +26,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Web
 
          return ( sender, certificate, chain, sslPolicyErrors ) =>
          {
-            var request = sender as HttpWebRequest;
-            if( request != null )
-            {
-               // Keep the legacy host registration API for compatibility, but never
-               // accept an invalid certificate. The platform's normal certificate
-               // validation remains authoritative for every endpoint.
-               return _hosts.Contains( request.Address.Host )
-                  && sslPolicyErrors == SslPolicyErrors.None;
-            }
-            return false;
+            return sslPolicyErrors == SslPolicyErrors.None;
          };
       }
    }
