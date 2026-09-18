@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,8 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
       private static UnityEngine.Object OverrideFontTextMeshPro;
       private static bool _hasReadFallbackFontTextMeshPro = false;
       private static UnityEngine.Object FallbackFontTextMeshPro;
+      private static bool _hasReadFallbackSystemFont;
+      private static UnityEngine.Object FallbackSystemFontTextMeshPro;
 
       public static Font GetOrCreate( int size )
       {
@@ -59,6 +62,71 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
 
          return OverrideFontTextMeshPro;
+      }
+
+      public static UnityEngine.Object GetOrCreateFallbackSystemFontTextMeshPro()
+      {
+         if( _hasReadFallbackSystemFont ) return FallbackSystemFontTextMeshPro;
+         _hasReadFallbackSystemFont = true;
+
+         if( string.IsNullOrWhiteSpace( Settings.FallbackSystemFontName ) || UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont == null )
+            return null;
+
+         try
+         {
+            var requestedName = Settings.FallbackSystemFontName.Trim();
+            var installedNames = FontHelper.GetOSInstalledFontNames();
+            if( installedNames == null || !installedNames.Any( x => string.Equals( x, requestedName, StringComparison.OrdinalIgnoreCase ) ) )
+            {
+               XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + requestedName );
+               return null;
+            }
+
+            var font = Font.CreateDynamicFontFromOSFont( requestedName, 90 );
+            if( font == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + Settings.FallbackSystemFontName );
+               return null;
+            }
+
+            FallbackSystemFontTextMeshPro = (UnityEngine.Object)UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont.Invoke( null, new object[] { font } );
+            if( FallbackSystemFontTextMeshPro == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "This TextMeshPro version cannot create a dynamic font asset from an OS font." );
+               return null;
+            }
+
+            GameObject.DontDestroyOnLoad( font );
+            GameObject.DontDestroyOnLoad( FallbackSystemFontTextMeshPro );
+            return FallbackSystemFontTextMeshPro;
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "Unable to create the configured system fallback font: " + Settings.FallbackSystemFontName );
+            FallbackSystemFontTextMeshPro = null;
+            return null;
+         }
+      }
+
+      public static void RegisterFallbackSystemFontTextMeshPro()
+      {
+         var font = GetOrCreateFallbackSystemFontTextMeshPro();
+         if( font == null || UnityTypes.TMP_Settings_Properties.FallbackFontAssets == null ) return;
+
+         try
+         {
+#if MANAGED
+            var fallbacks = UnityTypes.TMP_Settings_Properties.FallbackFontAssets.Get( null ) as IList;
+#else
+            var fallbacksObj = (Il2CppSystem.Object)UnityTypes.TMP_Settings_Properties.FallbackFontAssets.Get( null );
+            fallbacksObj.TryCastTo<Il2CppSystem.Collections.IList>( out var fallbacks);
+#endif
+            if( fallbacks != null && !fallbacks.Contains( font ) ) fallbacks.Add( font );
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "Unable to register the dynamic system fallback font." );
+         }
       }
 
       public static UnityEngine.Object GetOrCreateFallbackFontTextMeshPro()

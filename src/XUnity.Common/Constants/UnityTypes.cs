@@ -172,6 +172,7 @@ namespace XUnity.Common.Constants
       public static class TMP_FontAsset_Properties
       {
          public static CachedProperty Version = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "version" );
+         public static CachedProperty FallbackFontAssetTable = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "fallbackFontAssetTable" );
       }
 
       public static class AdvScenarioData_Properties
@@ -339,6 +340,8 @@ namespace XUnity.Common.Constants
       public static class TMP_FontAsset_Methods
       {
          public static CachedMethod CreateFontAsset = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( string ), typeof( string ), typeof( int ) );
+         public static CachedMethod CreateFontAssetFromFont = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( UnityEngine.Font ) );
+         public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ) );
       }
 
       public static class TMP_Text_Methods

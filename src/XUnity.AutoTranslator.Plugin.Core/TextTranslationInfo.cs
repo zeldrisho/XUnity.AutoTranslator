@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -68,6 +69,54 @@ namespace XUnity.AutoTranslator.Plugin.Core
       {
          IsTranslated = true;
          TranslatedText = translatedText;
+      }
+
+      public void EnsureTextMeshProFallback( object ui, string text )
+      {
+         if( ui == null || string.IsNullOrEmpty( text ) || string.IsNullOrWhiteSpace( Settings.FallbackSystemFontName ) ) return;
+
+         var type = ui.GetUnityType();
+         if( ( UnityTypes.TextMeshPro == null || !UnityTypes.TextMeshPro.IsAssignableFrom( type ) )
+            && ( UnityTypes.TextMeshProUGUI == null || !UnityTypes.TextMeshProUGUI.IsAssignableFrom( type ) ) ) return;
+
+         try
+         {
+            var font = ui.GetType().CachedProperty( "font" ).Get( ui );
+            if( font == null ) return;
+
+            bool missing = UnityTypes.TMP_FontAsset_Methods.HasCharacter == null;
+            if( !missing )
+            {
+               foreach( var character in text )
+               {
+                  if( !char.IsControl( character ) && !(bool)UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character } ) )
+                  {
+                     missing = true;
+                     break;
+                  }
+               }
+            }
+            if( !missing ) return;
+
+            var fallback = FontCache.GetOrCreateFallbackSystemFontTextMeshPro();
+            if( fallback == null ) return;
+            FontCache.RegisterFallbackSystemFontTextMeshPro();
+
+            var tableProperty = UnityTypes.TMP_FontAsset_Properties.FallbackFontAssetTable;
+            if( tableProperty == null ) return;
+#if MANAGED
+            var table = tableProperty.Get( font ) as IList;
+#else
+            var tableObject = (Il2CppSystem.Object)tableProperty.Get( font );
+            tableObject.TryCastTo<Il2CppSystem.Collections.IList>( out var table);
+#endif
+            if( table != null && !table.Contains( fallback ) ) table.Add( fallback );
+         }
+         catch( Exception ex )
+         {
+            // Font fallback is optional; never prevent the translated text from being assigned.
+            XuaLogger.AutoTranslator.Warn( ex, "Unable to attach the dynamic TextMeshPro fallback font." );
+         }
       }
 
       public void ResetScrollIn( object ui )

@@ -937,6 +937,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
                }
 
                // NGUI only behaves if you set the text after the resize behaviour
+               if( isTranslated ) info?.EnsureTextMeshProFallback( ui, text );
                ui.SetText( text, info );
 
                info?.ResetScrollIn( ui );

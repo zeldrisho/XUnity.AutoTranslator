@@ -105,6 +105,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Configuration
       public static int? OverrideFontSize;
       public static string OverrideFontTextMeshPro;
       public static string FallbackFontTextMeshPro;
+      public static string FallbackSystemFontName;
       public static string UserAgent;
       public static bool DisableCertificateValidation;
       public static float? ResizeUILineSpacingScale;
@@ -251,6 +252,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Configuration
             OverrideFontSize = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "OverrideFontSize", (int?)null );
             OverrideFontTextMeshPro = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "OverrideFontTextMeshPro", string.Empty );
             FallbackFontTextMeshPro = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "FallbackFontTextMeshPro", string.Empty );
+            FallbackSystemFontName = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "FallbackSystemFontName", string.Empty );
             ResizeUILineSpacingScale = PluginEnvironment.Current.Preferences.GetOrDefault<float?>( "Behaviour", "ResizeUILineSpacingScale", null );
             ForceUIResizing = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "ForceUIResizing", false );
             IgnoreTextStartingWith = PluginEnvironment.Current.Preferences.GetOrDefault( "Behaviour", "IgnoreTextStartingWith", "\\u180e;" )

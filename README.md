@@ -336,6 +336,7 @@ UseStaticTranslations=True       ;Indicates whether or not to use translations f
 OverrideFont=                    ;Overrides the fonts used for texts when updating text components. NOTE: Only works for UGUI
 OverrideFontTextMeshPro=         ;Consider using FallbackFontTextMeshPro instead. Overrides the fonts used for texts when updating text components. NOTE: Only works for TextMeshPro
 FallbackFontTextMeshPro=         ;Adds a fallback font for TextMeshPro in case a specific character is not supported. This is recommended over OverrideFontTextMeshPro
+FallbackSystemFontName=          ;Installed OS font family used to dynamically create a TextMeshPro fallback when translated text has missing glyphs. Empty disables it.
 ResizeUILineSpacingScale=        ;A decimal value that the default line spacing should be scaled by during UI resizing, for example: 0.80. NOTE: Only works for UGUI
 ForceUIResizing=True             ;Indicates whether the UI resize behavior should be applied to all UI components regardless of them being translated.
 IgnoreTextStartingWith=\u180e;   ;Indicates that the plugin should ignore any strings starting with certain characters. This is a list separated by ';'.
@@ -488,6 +489,7 @@ When translating to languages that use non-ASCII letters the game's default font
      2. If the specified string matches name of a font installed on the system (e.g. Arial), the font will be attempted to be loaded as a TMP font. Requires TextMeshPro 3.2.0+ (see #854).
      3. Otherwise, the string will be used to attempt to load a font through the Resources API. Default resources that are often distributed with TextMeshPro are: `Fonts & Materials/LiberationSans SDF` or `Fonts & Materials/ARIAL SDF`.
  * `FallbackFontTextMeshPro`: Adds a fallback font that TextMesh Pro can use in case a specific character is not supported.
+ * `FallbackSystemFontName`: Optional installed OS font family used to create a dynamic TextMesh Pro fallback at runtime when the active font lacks a translated character. Empty disables this behavior.
 
 These settings are not affected by `EnableUIResizing` and `ForceUIResizing`, but the resizing behavior may change how the custom font is displayed.
 
