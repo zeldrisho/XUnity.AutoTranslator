@@ -341,7 +341,7 @@ namespace XUnity.Common.Constants
       {
          public static CachedMethod CreateFontAsset = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( string ), typeof( string ), typeof( int ) );
          public static CachedMethod CreateFontAssetFromFont = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( UnityEngine.Font ) );
-         public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ) );
+         public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ), typeof( bool ), typeof( bool ) );
       }
 
       public static class TMP_Text_Methods

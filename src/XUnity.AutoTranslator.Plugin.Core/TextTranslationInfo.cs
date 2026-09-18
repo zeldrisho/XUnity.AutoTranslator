@@ -99,7 +99,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
             {
                foreach( var character in text )
                {
-                  if( !char.IsControl( character ) && !(bool)UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character } ) )
+                  if( !char.IsControl( character ) && !(bool)UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character, false, false } ) )
                   {
                      missing = true;
                      break;
