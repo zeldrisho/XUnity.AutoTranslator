@@ -364,11 +364,13 @@ namespace XUnity.Common.Constants
                XuaLogger.AutoTranslator.Info( "TMP_FontAsset.CreateFontAsset overload: " + method );
             }
 
-            // Prefer the overload with the fewest arguments; this remains compatible
-            // with both the legacy one-argument factory and newer TMP factories.
+            // Unity 2022/TMP 3.x exposes both the legacy Font overload and the
+            // configured overload. The legacy overload returns null in some
+            // runtimes, so prefer the eight-argument factory when it exists.
             return methods.Where( x => x.GetParameters().Length > 0
                   && x.GetParameters()[ 0 ].ParameterType == typeof( UnityEngine.Font ) )
-               .OrderBy( x => x.GetParameters().Length )
+               .OrderBy( x => x.GetParameters().Length == 8 ? 0 : x.GetParameters().Length == 1 ? 1 : 2 )
+               .ThenBy( x => x.GetParameters().Length )
                .FirstOrDefault();
          }
          catch( Exception ex )
@@ -384,7 +386,6 @@ namespace XUnity.Common.Constants
          var arguments = new object[ parameters.Length ];
          arguments[ 0 ] = font;
          var intArgument = 0;
-         var enumArgument = 0;
          for( var i = 1; i < parameters.Length; i++ )
          {
             var parameter = parameters[ i ];
@@ -401,10 +402,25 @@ namespace XUnity.Common.Constants
                arguments[ i ] = true;
             else if( type.IsEnum )
             {
-               var valueName = parameter.Name != null && parameter.Name.ToLowerInvariant().Contains( "population" ) || enumArgument > 0 ? "Dynamic" : "SDFAA";
-               enumArgument++;
-               try { arguments[ i ] = Enum.Parse( type, valueName, true ); }
-               catch { arguments[ i ] = Activator.CreateInstance( type ); }
+               var isPopulationMode = parameter.Name != null && parameter.Name.ToLowerInvariant().Contains( "population" );
+               try
+               {
+                  // SDFAA is the normal dynamic SDF mode. Some TMP versions
+                  // call the same mode SMOOTH, so support both names.
+                  arguments[ i ] = Enum.Parse( type, isPopulationMode ? "Dynamic" : "SDFAA", true );
+               }
+               catch
+               {
+                  try
+                  {
+                     arguments[ i ] = Enum.Parse( type, isPopulationMode ? "Dynamic" : "SMOOTH", true );
+                  }
+                  catch
+                  {
+                     // Values used by TMP 3.x: Dynamic = 1, SDFAA = 4165.
+                     arguments[ i ] = Enum.ToObject( type, isPopulationMode ? 1 : 4165 );
+                  }
+               }
             }
             else
                arguments[ i ] = type.IsValueType ? Activator.CreateInstance( type ) : null;

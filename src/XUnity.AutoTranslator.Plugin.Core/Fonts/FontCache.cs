@@ -90,12 +90,13 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
          var createFontAssetFromFont = UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont;
          XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Fallback prerequisites: configured name blank=" + Settings.FallbackSystemFontName.IsNullOrWhiteSpace()
-            + "; CreateFontAsset(Font) reflection handle null=" + ( createFontAssetFromFont == null ) + "." );
+            + "; CreateFontAsset(Font, ...) reflection handle null=" + ( createFontAssetFromFont == null )
+            + "; parameter count=" + ( createFontAssetFromFont == null ? 0 : createFontAssetFromFont.GetParameters().Length ) + "." );
          if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || createFontAssetFromFont == null )
          {
             // These are definitive failures, so it is safe to cache the null result.
             _hasReadFallbackSystemFont = true;
-            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] No usable TMP_FontAsset.CreateFontAsset(Font) overload was found; fallback creation is disabled." );
+            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] No usable TMP_FontAsset.CreateFontAsset(Font, ...) overload was found; fallback creation is disabled." );
             return null;
          }
 
@@ -125,11 +126,12 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset overload: " + createFontAssetFromFont );
                var arguments = UnityTypes.CreateFontAssetFromFontArguments( createFontAssetFromFont, font );
                FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, arguments );
-               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(Font) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(" + createFontAssetFromFont.GetParameters().Length
+                  + " parameters) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
             }
             catch( Exception ex )
             {
-               XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] CreateFontAsset(Font) invocation failed. InnerException: "
+               XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] CreateFontAsset(Font, ...) invocation failed. InnerException: "
                   + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
                FallbackSystemFontTextMeshPro = null;
                _hasReadFallbackSystemFont = true;
