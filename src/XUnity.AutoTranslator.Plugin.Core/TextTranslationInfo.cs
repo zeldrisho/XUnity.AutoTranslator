@@ -83,17 +83,39 @@ namespace XUnity.AutoTranslator.Plugin.Core
       /// <param name="text">The translated text whose characters must be supported.</param>
       public void EnsureTextMeshProFallback( object ui, string text )
       {
-         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] EnsureTextMeshProFallback ENTERED for text: " + text );
-         if( ui == null || string.IsNullOrEmpty( text ) || Settings.FallbackSystemFontName.IsNullOrWhiteSpace() ) return;
-
-         var type = ui.GetUnityType();
-         if( ( UnityTypes.TextMeshPro == null || !UnityTypes.TextMeshPro.IsAssignableFrom( type ) )
-            && ( UnityTypes.TextMeshProUGUI == null || !UnityTypes.TextMeshProUGUI.IsAssignableFrom( type ) ) ) return;
-
          try
          {
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] EnsureTextMeshProFallback ENTERED for text: " + text );
+            if( ui == null )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: ui is null." );
+               return;
+            }
+            if( string.IsNullOrEmpty( text ) )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: text is null or empty." );
+               return;
+            }
+            if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: FallbackSystemFontName is blank." );
+               return;
+            }
+
+            var type = ui.GetUnityType();
+            if( ( UnityTypes.TextMeshPro == null || !UnityTypes.TextMeshPro.IsAssignableFrom( type ) )
+               && ( UnityTypes.TextMeshProUGUI == null || !UnityTypes.TextMeshProUGUI.IsAssignableFrom( type ) ) )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: ui is not a supported TextMeshPro component." );
+               return;
+            }
+
             var font = ui.GetType().CachedProperty( "font" ).Get( ui );
-            if( font == null ) return;
+            if( font == null )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: active TMP font is null." );
+               return;
+            }
 
             var primaryFontObject = font as UnityEngine.Object;
             var primaryFontName = primaryFontObject != null ? primaryFontObject.name : font.GetType().FullName;
@@ -108,6 +130,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
                      + UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character, false, false } ) );
                }
 
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Checking actual text characters for missing primary TMP glyphs." );
                foreach( var character in text )
                {
                   if( !char.IsControl( character ) && !(bool)UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character, false, false } ) )
@@ -116,20 +139,27 @@ namespace XUnity.AutoTranslator.Plugin.Core
                      break;
                   }
                }
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Actual text character scan completed; missing=" + missing + "." );
             }
             if( !missing )
             {
-               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] EnsureTextMeshProFallback returning early: primary TMP font reports all text characters are present." );
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: primary TMP font reports all text characters are present." );
                return;
             }
 
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Proceeding to create fallback font." );
             var fallback = FontCache.GetOrCreateFallbackSystemFontTextMeshPro();
-            if( fallback == null ) return;
+            if( fallback == null )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: fallback font creation returned null." );
+               return;
+            }
             FontCache.RegisterFallbackSystemFontTextMeshPro();
 
             var tableProperty = UnityTypes.TMP_FontAsset_Properties.FallbackFontAssetTable;
             if( tableProperty == null )
             {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: active asset fallbackFontAssetTable property was not resolved." );
                XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration skipped: active asset fallbackFontAssetTable was not resolved." );
                return;
             }
@@ -141,6 +171,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
 #endif
             if( table == null )
             {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning early: active asset fallbackFontAssetTable value is null." );
                XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration failed: active asset fallbackFontAssetTable is null." );
                return;
             }
@@ -152,7 +183,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
          catch( Exception ex )
          {
             // Font fallback is optional; never prevent the translated text from being assigned.
-            XuaLogger.AutoTranslator.Warn( ex, "Unable to attach the dynamic TextMeshPro fallback font." );
+            XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] EnsureTextMeshProFallback exception (full stack trace):" );
          }
       }
 
