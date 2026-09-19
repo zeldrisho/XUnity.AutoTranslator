@@ -201,6 +201,18 @@ namespace XUnity.Common.Constants
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "atlasTexture" );
          public static CachedField FaceInfo = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_FaceInfo" )
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "faceInfo" );
+         public static CachedField VersionField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_Version" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "version" );
+         public static CachedField Material = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_Material" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "material" );
+         public static CachedField FontFeatureTable = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_FontFeatureTable" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "fontFeatureTable" );
+         public static CachedField FreeGlyphRects = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_FreeGlyphRects" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "freeGlyphRects" );
+         public static CachedField UsedGlyphRects = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_UsedGlyphRects" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "usedGlyphRects" );
+         public static CachedField AtlasTextureBuffer = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasTextureBuffer" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "atlasTextureBuffer" );
          public static CachedField AtlasWidth = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasWidth" );
          public static CachedField AtlasHeight = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasHeight" );
       }
@@ -379,6 +391,19 @@ namespace XUnity.Common.Constants
          public static CachedMethod ReadFontAssetDefinition = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "ReadFontAssetDefinition" );
          public static CachedMethod InitializeCharacterLookupDictionary = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "InitializeCharacterLookupDictionary" );
          public static CachedMethod InitializeGlyphLookupDictionary = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "InitializeGlyphLookupDictionary" );
+         public static MethodInfo AddCharacters = ResolveCharacterMethod( "AddCharacters" );
+         public static MethodInfo TryAddCharacters = ResolveCharacterMethod( "TryAddCharacters" );
+
+         private static MethodInfo ResolveCharacterMethod( string name )
+         {
+            var type = TMP_FontAsset?.ClrType;
+            if( type == null ) return null;
+            return type.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance )
+               .Where( x => x.Name == name && x.GetParameters().Length > 0
+                  && x.GetParameters()[ 0 ].ParameterType == typeof( string ) )
+               .OrderBy( x => x.GetParameters().Length )
+               .FirstOrDefault();
+         }
       }
 
       private static MethodInfo ResolveCreateFontAssetFromFont()

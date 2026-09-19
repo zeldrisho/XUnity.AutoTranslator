@@ -247,6 +247,11 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] TMP lookup dictionary initialization failed." );
             }
 
+            // AddCharacters is the supported initialization path in newer TMP
+            // versions.  It also exercises the dynamic atlas code, unlike the
+            // legacy ReadFontAssetDefinition call.
+            SeedDynamicFontAsset( asset, "e" );
+
             asset.name = Settings.FallbackSystemFontName + " Dynamic Fallback";
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Manual TMP_FontAsset construction completed; name='" + asset.name + "'." );
             return asset;
@@ -263,10 +268,26 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          const int atlasSize = 1024;
          try
          {
+            // Match the version written by TMP_FontAsset.CreateFontAsset so
+            // ReadFontAssetDefinition does not enter the legacy upgrade path.
+            SetField( UnityTypes.TMP_FontAsset_Properties.VersionField, asset, "1.1.0" );
             SetCollection( UnityTypes.TMP_FontAsset_Properties.CharacterTable, asset );
             SetCollection( UnityTypes.TMP_FontAsset_Properties.GlyphTable, asset );
             SetCollection( UnityTypes.TMP_FontAsset_Properties.CharacterLookupTable, asset );
             SetCollection( UnityTypes.TMP_FontAsset_Properties.GlyphLookupTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.FontFeatureTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.FreeGlyphRects, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.UsedGlyphRects, asset );
+            SetEmptyValue( UnityTypes.TMP_FontAsset_Properties.AtlasTextureBuffer, asset );
+
+            // ReadFontAssetDefinition dereferences material even for an empty
+            // asset (to read the gradient scale and material hash).
+            var material = UnityTypes.TMP_FontAsset_Properties.Material;
+            if( material != null && material.Get( asset ) == null )
+            {
+               var shader = Shader.Find( "UI/Default" );
+               if( shader != null ) material.Set( asset, new Material( shader ) );
+            }
 
             var texture = new Texture2D( atlasSize, atlasSize, TextureFormat.Alpha8, false );
             texture.name = "XUnity AutoTranslator Dynamic TMP Atlas";
@@ -275,6 +296,10 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             SetField( UnityTypes.TMP_FontAsset_Properties.AtlasWidth, asset, atlasSize );
             SetField( UnityTypes.TMP_FontAsset_Properties.AtlasHeight, asset, atlasSize );
             PopulateFaceInfo( asset, sourceFont );
+
+            // Dynamic atlas packing starts with one free rectangle.  These
+            // fields are not initialized by ScriptableObject.CreateInstance.
+            AddFreeGlyphRect( UnityTypes.TMP_FontAsset_Properties.FreeGlyphRects, asset, atlasSize );
 
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Bootstrapped TMP tables and atlas; atlasTextures valid="
                + HasValidAtlasTexture( UnityTypes.TMP_FontAsset_Properties.AtlasTextures?.Get( asset ) ) + "." );
@@ -302,6 +327,15 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          field.Set( asset, Activator.CreateInstance( field.FieldType ) );
       }
 
+      private static void SetEmptyValue( CachedField field, object asset )
+      {
+         if( field == null || field.FieldType == null || field.Get( asset ) != null ) return;
+         var value = field.FieldType.IsArray
+            ? Array.CreateInstance( field.FieldType.GetElementType(), 0 )
+            : Activator.CreateInstance( field.FieldType );
+         field.Set( asset, value );
+      }
+
       private static void SetAtlas( CachedField field, object asset, Texture2D texture )
       {
          if( field == null || field.FieldType == null ) return;
@@ -318,6 +352,47 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             var add = type.GetMethod( "Add" );
             if( add != null ) add.Invoke( list, new object[] { texture } );
             field.Set( asset, list );
+         }
+      }
+
+      private static void AddFreeGlyphRect( CachedField field, object asset, int atlasSize )
+      {
+         if( field == null ) return;
+         var collection = field.Get( asset );
+         if( collection == null ) return;
+         var add = collection.GetType().GetMethod( "Add" );
+         if( add == null ) return;
+
+         var rectType = add.GetParameters()[ 0 ].ParameterType;
+         var rect = Activator.CreateInstance( rectType, new object[] { 0, 0, atlasSize - 1, atlasSize - 1 } );
+         add.Invoke( collection, new[] { rect } );
+      }
+
+      private static void SeedDynamicFontAsset( UnityEngine.Object asset, string characters )
+      {
+         try
+         {
+            var method = UnityTypes.TMP_FontAsset_Methods.AddCharacters
+               ?? UnityTypes.TMP_FontAsset_Methods.TryAddCharacters;
+            if( method == null ) return;
+
+            var parameters = method.GetParameters();
+            var arguments = new object[ parameters.Length ];
+            arguments[ 0 ] = characters;
+            for( var i = 1; i < parameters.Length; i++ )
+            {
+               var parameter = parameters[ i ];
+               arguments[ i ] = parameter.IsOut ? null
+                  : parameter.ParameterType.IsValueType ? Activator.CreateInstance( parameter.ParameterType ) : null;
+            }
+
+            var result = method.Invoke( asset, arguments );
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP " + method.Name + "('" + characters
+               + "') returned " + ( result ?? "<void>" ) + "." );
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] TMP dynamic character seeding failed." );
          }
       }
 
