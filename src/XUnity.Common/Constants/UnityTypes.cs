@@ -112,7 +112,10 @@ namespace XUnity.Common.Constants
       public static readonly TypeContainer GUIStyle = FindType( "UnityEngine.GUIStyle" );
       public static readonly TypeContainer ImageConversion = FindType( "UnityEngine.ImageConversion" );
       public static readonly TypeContainer Texture2D = FindType( "UnityEngine.Texture2D" );
-      public static readonly TypeContainer FontEngine = FindType( "UnityEngine.TextCore.FontEngine" );
+      // FontEngine moved under TextCore.LowLevel in Unity 2022. Keep the
+      // older name as a fallback for games using the pre-2022 TextCore API.
+      public static readonly TypeContainer FontEngine = FindType( "UnityEngine.TextCore.LowLevel.FontEngine" )
+         ?? FindType( "UnityEngine.TextCore.FontEngine" );
       public static readonly TypeContainer Texture = FindType( "UnityEngine.Texture" );
       public static readonly TypeContainer SpriteRenderer = FindType( "UnityEngine.SpriteRenderer" );
       public static readonly TypeContainer Sprite = FindType( "UnityEngine.Sprite" );
@@ -181,6 +184,10 @@ namespace XUnity.Common.Constants
          // Some TMP versions expose these as serialized fields rather than properties.
          public static CachedField SourceFontFileField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_SourceFontFile" )
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "sourceFontFile" );
+         // TMP 3.x uses this flag to tell AddCharacters that the FontEngine
+         // face has already been loaded. It is not initialized by
+         // ScriptableObject.CreateInstance.
+         public static CachedField SourceFontFileInitialized = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_SourceFontFile_Initialized" );
          public static CachedField IsMultiAtlasTexturesEnabledField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_IsMultiAtlasTexturesEnabled" )
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "isMultiAtlasTexturesEnabled" );
 
@@ -488,8 +495,17 @@ namespace XUnity.Common.Constants
       public static class FontEngine_Methods
       {
          public static MethodInfo GetFaceInfo = UnityTypes.FontEngine?.ClrType.GetMethod( "GetFaceInfo", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, Type.EmptyTypes, null );
-         public static MethodInfo LoadFontFace = UnityTypes.FontEngine?.ClrType.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static )
-            .FirstOrDefault( x => x.Name == "LoadFontFace" && x.GetParameters().Length > 0 && x.GetParameters()[ 0 ].ParameterType == typeof( UnityEngine.Font ) );
+         public static MethodInfo LoadFontFace = FindLoadFontFace( typeof( UnityEngine.Font ) );
+         public static MethodInfo LoadFontFaceFromPath = FindLoadFontFace( typeof( string ) );
+
+         private static MethodInfo FindLoadFontFace( Type firstParameterType )
+         {
+            return UnityTypes.FontEngine?.ClrType.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static )
+               .Where( x => x.Name == "LoadFontFace" && x.GetParameters().Length > 0
+                  && x.GetParameters()[ 0 ].ParameterType == firstParameterType )
+               .OrderBy( x => x.GetParameters().Length )
+               .FirstOrDefault();
+         }
       }
 
       public static class TMP_Text_Methods

@@ -201,11 +201,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] ScriptableObject.CreateInstance(TMP_FontAsset) returned null=" + ( asset == null ) + "." );
             if( asset == null ) return null;
 
-            var sourceFont = UnityTypes.TMP_FontAsset_Properties.SourceFontFile;
-            var sourceFontField = UnityTypes.TMP_FontAsset_Properties.SourceFontFileField;
-            if( sourceFont != null ) sourceFont.Set( asset, font );
-            else if( sourceFontField != null ) sourceFontField.Set( asset, font );
-            else XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] TMP_FontAsset.sourceFontFile was not resolved." );
+            SetSourceFontFile( asset, font );
 
             var atlasPopulationMode = UnityTypes.TMP_FontAsset_Properties.AtlasPopulationMode;
             if( atlasPopulationMode != null && atlasPopulationMode.PropertyType.IsEnum )
@@ -233,6 +229,12 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                }
             }
             else XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP_FontAsset.ReadFontAssetDefinition() was not resolved; continuing." );
+
+            // ReadFontAssetDefinition may clear the serialized source-font
+            // state. Restore it and load the TextCore face immediately before
+            // AddCharacters/TryAddCharacters is called.
+            SetSourceFontFile( asset, font );
+            PopulateFaceInfo( asset, font );
 
             // ReadFontAssetDefinition can rebuild the tables, but some TMP
             // versions only do so when their private initialization helpers are
@@ -401,21 +403,103 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          if( field != null ) field.Set( asset, value );
       }
 
+      private static void SetSourceFontFile( UnityEngine.Object asset, Font sourceFont )
+      {
+         var property = UnityTypes.TMP_FontAsset_Properties.SourceFontFile;
+         var field = UnityTypes.TMP_FontAsset_Properties.SourceFontFileField;
+         try
+         {
+            // Set both where available. On some TMP builds the property setter
+            // does not update the serialized m_SourceFontFile backing field.
+            property?.Set( asset, sourceFont );
+            field?.Set( asset, sourceFont );
+            var value = property?.Get( asset ) ?? field?.Get( asset );
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP sourceFontFile assigned; readback null=" + ( value == null ) + "." );
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] Unable to assign TMP sourceFontFile." );
+         }
+      }
+
       private static void PopulateFaceInfo( object asset, Font sourceFont )
       {
          var faceInfo = UnityTypes.TMP_FontAsset_Properties.FaceInfo;
-         var load = UnityTypes.FontEngine_Methods.LoadFontFace;
          var get = UnityTypes.FontEngine_Methods.GetFaceInfo;
-         if( faceInfo == null || load == null || get == null ) return;
+         if( faceInfo == null || get == null ) return;
 
-         var parameters = load.GetParameters();
-         var args = new object[ parameters.Length ];
-         args[ 0 ] = sourceFont;
-         for( var i = 1; i < args.Length; i++ )
-            args[ i ] = parameters[ i ].ParameterType == typeof( int ) ? (object)90 : Activator.CreateInstance( parameters[ i ].ParameterType );
-         var loaded = load.Invoke( null, args );
-         if( loaded == null || Convert.ToBoolean( loaded ) )
+         var loaded = false;
+         var load = UnityTypes.FontEngine_Methods.LoadFontFace;
+         if( load != null )
+            loaded = InvokeLoadFontFace( load, sourceFont, 90 );
+
+         // Unity 2022's LowLevel FontEngine also exposes a file-path overload.
+         // Prefer the Font overload, but try the actual file for runtimes where
+         // Font.CreateDynamicFontFromOSFont does not provide TextCore data.
+         if( !loaded )
+         {
+            var pathLoad = UnityTypes.FontEngine_Methods.LoadFontFaceFromPath;
+            foreach( var path in GetFontFileCandidates() )
+            {
+               if( pathLoad == null || !File.Exists( path ) ) continue;
+               if( InvokeLoadFontFace( pathLoad, path, 90 ) )
+               {
+                  loaded = true;
+                  XuaLogger.AutoTranslator.Info( "[VI-DEBUG] FontEngine.LoadFontFace(path) succeeded: " + path );
+                  break;
+               }
+            }
+         }
+
+         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] FontEngine face initialization result: " + loaded
+            + "; Font overload resolved=" + ( load != null )
+            + "; path overload resolved=" + ( UnityTypes.FontEngine_Methods.LoadFontFaceFromPath != null ) + "." );
+         if( loaded )
+         {
             faceInfo.Set( asset, get.Invoke( null, null ) );
+            var initialized = UnityTypes.TMP_FontAsset_Properties.SourceFontFileInitialized;
+            if( initialized != null && initialized.FieldType == typeof( bool ) ) initialized.Set( asset, true );
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP m_SourceFontFile_Initialized set to true; field resolved="
+               + ( initialized != null ) + "; bool=" + ( initialized != null && initialized.FieldType == typeof( bool ) ) + "." );
+         }
+      }
+
+      private static bool InvokeLoadFontFace( System.Reflection.MethodInfo method, object source, int pointSize )
+      {
+         try
+         {
+            var parameters = method.GetParameters();
+            var args = new object[ parameters.Length ];
+            args[ 0 ] = source;
+            var intArgument = 0;
+            for( var i = 1; i < args.Length; i++ )
+            {
+               if( parameters[ i ].ParameterType == typeof( int ) )
+                  args[ i ] = intArgument++ == 0 ? (object)pointSize : 0;
+               else
+                  args[ i ] = Activator.CreateInstance( parameters[ i ].ParameterType );
+            }
+            var result = method.Invoke( null, args );
+            return result == null || Convert.ToBoolean( result );
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] FontEngine.LoadFontFace failed for " + source + "." );
+            return false;
+         }
+      }
+
+      private static IEnumerable<string> GetFontFileCandidates()
+      {
+         var fonts = Environment.GetFolderPath( Environment.SpecialFolder.Fonts );
+         if( fonts.IsNullOrWhiteSpace() ) yield break;
+         var name = Settings.FallbackSystemFontName ?? "";
+         var compact = new string( name.Where( char.IsLetterOrDigit ).ToArray() );
+         foreach( var extension in new[] { ".ttf", ".otf" } )
+         {
+            var candidate = Path.Combine( fonts, compact + extension );
+            if( File.Exists( candidate ) ) yield return candidate;
+         }
       }
 
       private static void LogFallbackSystemFontDiagnostics( UnityEngine.Object font )
