@@ -496,8 +496,8 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          // available on supported Windows runtimes and keeps this path
          // compatible with both net35 and net6.0.
          var windows = Environment.GetEnvironmentVariable( "WINDIR" );
-         if( windows.IsNullOrWhiteSpace() )
-            windows = Environment.GetFolderPath( Environment.SpecialFolder.Windows );
+         if( windows.IsNullOrWhiteSpace() && !Environment.SystemDirectory.IsNullOrWhiteSpace() )
+            windows = Directory.GetParent( Environment.SystemDirectory )?.FullName;
          var fonts = windows.IsNullOrWhiteSpace() ? null : Path.Combine( windows, "Fonts" );
          if( fonts.IsNullOrWhiteSpace() ) yield break;
          var name = Settings.FallbackSystemFontName ?? "";
