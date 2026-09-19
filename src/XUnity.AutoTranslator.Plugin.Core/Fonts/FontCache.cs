@@ -80,16 +80,30 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
       /// <returns>The fallback font asset, or <see langword="null"/> when it cannot be created.</returns>
       public static UnityEngine.Object GetOrCreateFallbackSystemFontTextMeshPro()
       {
-         if( _hasReadFallbackSystemFont ) return FallbackSystemFontTextMeshPro;
+         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] GetOrCreateFallbackSystemFontTextMeshPro: hasRead=" + _hasReadFallbackSystemFont
+            + "; cachedNull=" + ( FallbackSystemFontTextMeshPro == null )
+            + "; FallbackSystemFontName='" + Settings.FallbackSystemFontName + "'." );
+         if( _hasReadFallbackSystemFont )
+         {
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning cached fallback system TMP font: null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
+            return FallbackSystemFontTextMeshPro;
+         }
          _hasReadFallbackSystemFont = true;
 
-         if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont == null )
+         var createFontAssetFromFont = UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont;
+         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Fallback prerequisites: configured name blank=" + Settings.FallbackSystemFontName.IsNullOrWhiteSpace()
+            + "; CreateFontAsset(Font) reflection handle null=" + ( createFontAssetFromFont == null ) + "." );
+         if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || createFontAssetFromFont == null )
+         {
+            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] Fallback system font creation stopped before OS font creation; _hasReadFallbackSystemFont is now true, so this null result is cached." );
             return null;
+         }
 
          try
          {
             var requestedName = Settings.FallbackSystemFontName.Trim();
             var installedNames = FontHelper.GetOSInstalledFontNames();
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Requested fallback OS font: '" + requestedName + "'; installed font list null=" + ( installedNames == null ) + "." );
             if( installedNames == null || !installedNames.Any( x => string.Equals( x, requestedName, StringComparison.OrdinalIgnoreCase ) ) )
             {
                XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + requestedName );
@@ -97,13 +111,27 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             }
 
             var font = Font.CreateDynamicFontFromOSFont( requestedName, 90 );
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Font.CreateDynamicFontFromOSFont returned null=" + ( font == null ) + "." );
             if( font == null )
             {
                XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + Settings.FallbackSystemFontName );
                return null;
             }
 
-            FallbackSystemFontTextMeshPro = (UnityEngine.Object)UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont.Invoke( null, new object[] { font } );
+            try
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset(UnityEngine.Font)." );
+               FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, new object[] { font } );
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(Font) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
+            }
+            catch( Exception ex )
+            {
+               XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] CreateFontAsset(Font) invocation failed. InnerException: "
+                  + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
+               FallbackSystemFontTextMeshPro = null;
+               return null;
+            }
+
             LogFallbackSystemFontDiagnostics( FallbackSystemFontTextMeshPro );
             if( FallbackSystemFontTextMeshPro == null )
             {
@@ -117,7 +145,8 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
          catch( Exception ex )
          {
-            XuaLogger.AutoTranslator.Warn( ex, "Unable to create the configured system fallback font: " + Settings.FallbackSystemFontName );
+            XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] Unable to create the configured system fallback font. InnerException: "
+               + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
             FallbackSystemFontTextMeshPro = null;
             return null;
          }
