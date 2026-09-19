@@ -173,6 +173,7 @@ namespace XUnity.Common.Constants
       {
          public static CachedProperty Version = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "version" );
          public static CachedProperty FallbackFontAssetTable = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "fallbackFontAssetTable" );
+         public static CachedProperty AtlasPopulationMode = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "atlasPopulationMode" );
       }
 
       public static class AdvScenarioData_Properties

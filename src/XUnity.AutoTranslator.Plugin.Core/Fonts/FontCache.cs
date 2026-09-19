@@ -104,6 +104,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             }
 
             FallbackSystemFontTextMeshPro = (UnityEngine.Object)UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont.Invoke( null, new object[] { font } );
+            LogFallbackSystemFontDiagnostics( FallbackSystemFontTextMeshPro );
             if( FallbackSystemFontTextMeshPro == null )
             {
                XuaLogger.AutoTranslator.Warn( "This TextMeshPro version cannot create a dynamic font asset from an OS font." );
@@ -122,13 +123,59 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          }
       }
 
+      private static void LogFallbackSystemFontDiagnostics( UnityEngine.Object font )
+      {
+         try
+         {
+            XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback CreateFontAsset(Font) method resolved/executed: true; returned null: " + ( font == null ) );
+            if( font == null ) return;
+
+            var atlasPopulationMode = UnityTypes.TMP_FontAsset_Properties.AtlasPopulationMode;
+            XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback atlasPopulationMode: "
+               + ( atlasPopulationMode == null ? "<unavailable>" : ( atlasPopulationMode.Get( font )?.ToString() ?? "<null>" ) ) );
+
+            var hasCharacter = UnityTypes.TMP_FontAsset_Methods.HasCharacter;
+            if( hasCharacter == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback HasCharacter(char, bool, bool) was not resolved." );
+               return;
+            }
+
+            foreach( var character in new[] { 'ế', 'ệ', 'ắ', 'ộ', 'ữ' } )
+            {
+               XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback HasCharacter U+" + ( (int)character ).ToString( "X4" )
+                  + " ('" + character + "'): " + hasCharacter.Invoke( font, new object[] { character, false, false } ) );
+            }
+
+            var decomposed = "e\u0301";
+            foreach( var character in decomposed )
+            {
+               XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback HasCharacter NFD U+" + ( (int)character ).ToString( "X4" )
+                  + " ('" + character + "'): " + hasCharacter.Invoke( font, new object[] { character, false, false } ) );
+            }
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "Unable to log dynamic TMP fallback diagnostics." );
+         }
+      }
+
       /// <summary>
       /// Adds the configured system font asset to TextMesh Pro's global fallback list.
       /// </summary>
       public static void RegisterFallbackSystemFontTextMeshPro()
       {
          var font = GetOrCreateFallbackSystemFontTextMeshPro();
-         if( font == null || UnityTypes.TMP_Settings_Properties.FallbackFontAssets == null ) return;
+         if( font == null )
+         {
+            XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration skipped because the fallback asset is null." );
+            return;
+         }
+         if( UnityTypes.TMP_Settings_Properties.FallbackFontAssets == null )
+         {
+            XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration skipped because TMP_Settings.fallbackFontAssets was not resolved." );
+            return;
+         }
 
          try
          {
@@ -138,7 +185,14 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             var fallbacksObj = (Il2CppSystem.Object)UnityTypes.TMP_Settings_Properties.FallbackFontAssets.Get( null );
             fallbacksObj.TryCastTo<Il2CppSystem.Collections.IList>( out var fallbacks);
 #endif
-            if( fallbacks != null && !fallbacks.Contains( font ) ) fallbacks.Add( font );
+            if( fallbacks == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration failed: TMP_Settings.fallbackFontAssets is null." );
+               return;
+            }
+
+            if( !fallbacks.Contains( font ) ) fallbacks.Add( font );
+            XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback global registration succeeded: " + fallbacks.Contains( font ) );
          }
          catch( Exception ex )
          {

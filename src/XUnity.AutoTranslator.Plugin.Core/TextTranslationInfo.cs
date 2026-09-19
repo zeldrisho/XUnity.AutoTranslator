@@ -113,14 +113,26 @@ namespace XUnity.AutoTranslator.Plugin.Core
             FontCache.RegisterFallbackSystemFontTextMeshPro();
 
             var tableProperty = UnityTypes.TMP_FontAsset_Properties.FallbackFontAssetTable;
-            if( tableProperty == null ) return;
+            if( tableProperty == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration skipped: active asset fallbackFontAssetTable was not resolved." );
+               return;
+            }
 #if MANAGED
             var table = tableProperty.Get( font ) as IList;
 #else
             var tableObject = (Il2CppSystem.Object)tableProperty.Get( font );
             tableObject.TryCastTo<Il2CppSystem.Collections.IList>( out var table);
 #endif
-            if( table != null && !table.Contains( fallback ) ) table.Add( fallback );
+            if( table == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "Dynamic TMP fallback registration failed: active asset fallbackFontAssetTable is null." );
+               return;
+            }
+
+            if( !table.Contains( fallback ) ) table.Add( fallback );
+            XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback active asset registration succeeded: " + table.Contains( fallback )
+               + ". EnsureTextMeshProFallback completed before ui.SetText(text, info)." );
          }
          catch( Exception ex )
          {
