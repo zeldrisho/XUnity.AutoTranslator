@@ -192,7 +192,11 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                return null;
             }
 
+#if IL2CPP
+            var asset = ScriptableObject.CreateInstance( UnityTypes.TMP_FontAsset.UnityType ) as UnityEngine.Object;
+#else
             var asset = ScriptableObject.CreateInstance( UnityTypes.TMP_FontAsset.ClrType ) as UnityEngine.Object;
+#endif
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] ScriptableObject.CreateInstance(TMP_FontAsset) returned null=" + ( asset == null ) + "." );
             if( asset == null ) return null;
 
