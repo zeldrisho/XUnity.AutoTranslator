@@ -112,6 +112,7 @@ namespace XUnity.Common.Constants
       public static readonly TypeContainer GUIStyle = FindType( "UnityEngine.GUIStyle" );
       public static readonly TypeContainer ImageConversion = FindType( "UnityEngine.ImageConversion" );
       public static readonly TypeContainer Texture2D = FindType( "UnityEngine.Texture2D" );
+      public static readonly TypeContainer FontEngine = FindType( "UnityEngine.TextCore.FontEngine" );
       public static readonly TypeContainer Texture = FindType( "UnityEngine.Texture" );
       public static readonly TypeContainer SpriteRenderer = FindType( "UnityEngine.SpriteRenderer" );
       public static readonly TypeContainer Sprite = FindType( "UnityEngine.Sprite" );
@@ -182,6 +183,26 @@ namespace XUnity.Common.Constants
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "sourceFontFile" );
          public static CachedField IsMultiAtlasTexturesEnabledField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_IsMultiAtlasTexturesEnabled" )
             ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "isMultiAtlasTexturesEnabled" );
+
+         // TMP 1.4-3.x leaves these null when the asset is made with
+         // ScriptableObject.CreateInstance.  Keep these as fields because most
+         // TMP releases expose the corresponding properties read-only.
+         public static CachedField CharacterTable = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_CharacterTable" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "characterTable" );
+         public static CachedField GlyphTable = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_GlyphTable" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "glyphTable" );
+         public static CachedField CharacterLookupTable = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_CharacterLookupDictionary" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "characterLookupTable" );
+         public static CachedField GlyphLookupTable = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_GlyphLookupDictionary" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "glyphLookupTable" );
+         public static CachedField AtlasTextures = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasTextures" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "atlasTextures" );
+         public static CachedField AtlasTexture = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasTexture" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "atlasTexture" );
+         public static CachedField FaceInfo = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_FaceInfo" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "faceInfo" );
+         public static CachedField AtlasWidth = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasWidth" );
+         public static CachedField AtlasHeight = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_AtlasHeight" );
       }
 
       public static class AdvScenarioData_Properties
@@ -356,6 +377,8 @@ namespace XUnity.Common.Constants
 
          public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ), typeof( bool ), typeof( bool ) );
          public static CachedMethod ReadFontAssetDefinition = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "ReadFontAssetDefinition" );
+         public static CachedMethod InitializeCharacterLookupDictionary = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "InitializeCharacterLookupDictionary" );
+         public static CachedMethod InitializeGlyphLookupDictionary = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "InitializeGlyphLookupDictionary" );
       }
 
       private static MethodInfo ResolveCreateFontAssetFromFont()
@@ -435,6 +458,13 @@ namespace XUnity.Common.Constants
                arguments[ i ] = type.IsValueType ? Activator.CreateInstance( type ) : null;
          }
          return arguments;
+      }
+
+      public static class FontEngine_Methods
+      {
+         public static MethodInfo GetFaceInfo = UnityTypes.FontEngine?.ClrType.GetMethod( "GetFaceInfo", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, Type.EmptyTypes, null );
+         public static MethodInfo LoadFontFace = UnityTypes.FontEngine?.ClrType.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static )
+            .FirstOrDefault( x => x.Name == "LoadFontFace" && x.GetParameters().Length > 0 && x.GetParameters()[ 0 ].ParameterType == typeof( UnityEngine.Font ) );
       }
 
       public static class TMP_Text_Methods

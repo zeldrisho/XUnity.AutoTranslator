@@ -9,6 +9,7 @@ using XUnity.AutoTranslator.Plugin.Core.Configuration;
 using XUnity.Common.Constants;
 using XUnity.Common.Extensions;
 using XUnity.Common.Logging;
+using XUnity.Common.Utilities;
 
 namespace XUnity.AutoTranslator.Plugin.Core.Fonts
 {
@@ -216,6 +217,8 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             else if( multiAtlasField != null ) multiAtlasField.Set( asset, true );
             else XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP_FontAsset.isMultiAtlasTexturesEnabled was not resolved; continuing." );
 
+            BootstrapDynamicFontAsset( asset, font );
+
             var readDefinition = UnityTypes.TMP_FontAsset_Methods.ReadFontAssetDefinition;
             if( readDefinition != null )
             {
@@ -231,6 +234,19 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             }
             else XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP_FontAsset.ReadFontAssetDefinition() was not resolved; continuing." );
 
+            // ReadFontAssetDefinition can rebuild the tables, but some TMP
+            // versions only do so when their private initialization helpers are
+            // called explicitly after a manually-created asset.
+            try
+            {
+               UnityTypes.TMP_FontAsset_Methods.InitializeGlyphLookupDictionary?.Invoke( asset );
+               UnityTypes.TMP_FontAsset_Methods.InitializeCharacterLookupDictionary?.Invoke( asset );
+            }
+            catch( Exception ex )
+            {
+               XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] TMP lookup dictionary initialization failed." );
+            }
+
             asset.name = Settings.FallbackSystemFontName + " Dynamic Fallback";
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Manual TMP_FontAsset construction completed; name='" + asset.name + "'." );
             return asset;
@@ -240,6 +256,92 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] Manual TMP_FontAsset construction failed." );
             return null;
          }
+      }
+
+      private static void BootstrapDynamicFontAsset( UnityEngine.Object asset, Font sourceFont )
+      {
+         const int atlasSize = 1024;
+         try
+         {
+            var properties = UnityTypes.TMP_FontAsset_Properties;
+            SetCollection( properties.CharacterTable, asset );
+            SetCollection( properties.GlyphTable, asset );
+            SetCollection( properties.CharacterLookupTable, asset );
+            SetCollection( properties.GlyphLookupTable, asset );
+
+            var texture = new Texture2D( atlasSize, atlasSize, TextureFormat.Alpha8, false );
+            texture.name = "XUnity AutoTranslator Dynamic TMP Atlas";
+            SetAtlas( properties.AtlasTextures, asset, texture );
+            SetField( properties.AtlasTexture, asset, texture );
+            SetField( properties.AtlasWidth, asset, atlasSize );
+            SetField( properties.AtlasHeight, asset, atlasSize );
+            PopulateFaceInfo( asset, sourceFont );
+
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Bootstrapped TMP tables and atlas; atlasTextures valid="
+               + HasValidAtlasTexture( properties.AtlasTextures?.Get( asset ) ) + "." );
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] Unable to bootstrap one or more TMP font asset internals." );
+         }
+      }
+
+      private static bool HasValidAtlasTexture( object textures )
+      {
+         if( textures is Array array )
+            return array.Length > 0 && array.GetValue( 0 ) != null;
+         if( textures is IEnumerable enumerable )
+         {
+            foreach( var texture in enumerable ) return texture != null;
+         }
+         return false;
+      }
+
+      private static void SetCollection( CachedField field, object asset )
+      {
+         if( field == null || field.FieldType == null || field.Get( asset ) != null ) return;
+         field.Set( asset, Activator.CreateInstance( field.FieldType ) );
+      }
+
+      private static void SetAtlas( CachedField field, object asset, Texture2D texture )
+      {
+         if( field == null || field.FieldType == null ) return;
+         var type = field.FieldType;
+         if( type.IsArray )
+         {
+            var array = Array.CreateInstance( type.GetElementType(), 1 );
+            array.SetValue( texture, 0 );
+            field.Set( asset, array );
+         }
+         else
+         {
+            var list = Activator.CreateInstance( type );
+            var add = type.GetMethod( "Add" );
+            if( add != null ) add.Invoke( list, new object[] { texture } );
+            field.Set( asset, list );
+         }
+      }
+
+      private static void SetField( CachedField field, object asset, object value )
+      {
+         if( field != null ) field.Set( asset, value );
+      }
+
+      private static void PopulateFaceInfo( object asset, Font sourceFont )
+      {
+         var faceInfo = UnityTypes.TMP_FontAsset_Properties.FaceInfo;
+         var load = UnityTypes.FontEngine_Methods.LoadFontFace;
+         var get = UnityTypes.FontEngine_Methods.GetFaceInfo;
+         if( faceInfo == null || load == null || get == null ) return;
+
+         var parameters = load.GetParameters();
+         var args = new object[ parameters.Length ];
+         args[ 0 ] = sourceFont;
+         for( var i = 1; i < args.Length; i++ )
+            args[ i ] = parameters[ i ].ParameterType == typeof( int ) ? (object)90 : Activator.CreateInstance( parameters[ i ].ParameterType );
+         var loaded = load.Invoke( null, args );
+         if( loaded == null || Convert.ToBoolean( loaded ) )
+            faceInfo.Set( asset, get.Invoke( null, null ) );
       }
 
       private static void LogFallbackSystemFontDiagnostics( UnityEngine.Object font )
@@ -260,11 +362,14 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                return;
             }
 
-            foreach( var character in new[] { 'ế', 'ệ', 'ắ', 'ộ', 'ữ' } )
+            foreach( var character in new[] { 'e', 'ế', 'ệ', 'ắ', 'ộ', 'ữ' } )
             {
                XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback HasCharacter U+" + ( (int)character ).ToString( "X4" )
                   + " ('" + character + "'): " + hasCharacter.Invoke( font, new object[] { character, false, false } ) );
             }
+
+            XuaLogger.AutoTranslator.Info( "Dynamic TMP fallback atlasTextures has at least one valid texture: "
+               + HasValidAtlasTexture( UnityTypes.TMP_FontAsset_Properties.AtlasTextures?.Get( font ) ) );
 
             var decomposed = "e\u0301";
             foreach( var character in decomposed )
