@@ -92,11 +92,10 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Fallback prerequisites: configured name blank=" + Settings.FallbackSystemFontName.IsNullOrWhiteSpace()
             + "; CreateFontAsset(Font, ...) reflection handle null=" + ( createFontAssetFromFont == null )
             + "; parameter count=" + ( createFontAssetFromFont == null ? 0 : createFontAssetFromFont.GetParameters().Length ) + "." );
-         if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || createFontAssetFromFont == null )
+         if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() )
          {
-            // These are definitive failures, so it is safe to cache the null result.
             _hasReadFallbackSystemFont = true;
-            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] No usable TMP_FontAsset.CreateFontAsset(Font, ...) overload was found; fallback creation is disabled." );
+            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] No fallback system font name was configured; fallback creation is disabled." );
             return null;
          }
 
@@ -123,19 +122,23 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
 
             try
             {
-               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset overload: " + createFontAssetFromFont );
-               var arguments = UnityTypes.CreateFontAssetFromFontArguments( createFontAssetFromFont, font );
-               FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, arguments );
-               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(" + createFontAssetFromFont.GetParameters().Length
-                  + " parameters) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
+               if( createFontAssetFromFont != null )
+               {
+                  XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset overload: " + createFontAssetFromFont );
+                  var arguments = UnityTypes.CreateFontAssetFromFontArguments( createFontAssetFromFont, font );
+                  FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, arguments );
+                  XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(" + createFontAssetFromFont.GetParameters().Length
+                     + " parameters) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
+               }
+
+               if( FallbackSystemFontTextMeshPro == null )
+                  FallbackSystemFontTextMeshPro = CreateDynamicFallbackFontAsset( font );
             }
             catch( Exception ex )
             {
                XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] CreateFontAsset(Font, ...) invocation failed. InnerException: "
                   + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
-               FallbackSystemFontTextMeshPro = null;
-               _hasReadFallbackSystemFont = true;
-               return null;
+               FallbackSystemFontTextMeshPro = CreateDynamicFallbackFontAsset( font );
             }
 
             if( FallbackSystemFontTextMeshPro != null )
@@ -174,6 +177,63 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
             FallbackSystemFontTextMeshPro = null;
             _hasReadFallbackSystemFont = true;
+            return null;
+         }
+      }
+
+      private static UnityEngine.Object CreateDynamicFallbackFontAsset( Font font )
+      {
+         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset returned null; attempting manual TMP_FontAsset ScriptableObject construction." );
+         try
+         {
+            if( UnityTypes.TMP_FontAsset?.ClrType == null )
+            {
+               XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] Manual TMP font construction skipped: TMP_FontAsset type was not resolved." );
+               return null;
+            }
+
+            var asset = ScriptableObject.CreateInstance( UnityTypes.TMP_FontAsset.ClrType ) as UnityEngine.Object;
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] ScriptableObject.CreateInstance(TMP_FontAsset) returned null=" + ( asset == null ) + "." );
+            if( asset == null ) return null;
+
+            var sourceFont = UnityTypes.TMP_FontAsset_Properties.SourceFontFile;
+            var sourceFontField = UnityTypes.TMP_FontAsset_Properties.SourceFontFileField;
+            if( sourceFont != null ) sourceFont.Set( asset, font );
+            else if( sourceFontField != null ) sourceFontField.Set( asset, font );
+            else XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] TMP_FontAsset.sourceFontFile was not resolved." );
+
+            var atlasPopulationMode = UnityTypes.TMP_FontAsset_Properties.AtlasPopulationMode;
+            if( atlasPopulationMode != null && atlasPopulationMode.PropertyType.IsEnum )
+               atlasPopulationMode.Set( asset, Enum.ToObject( atlasPopulationMode.PropertyType, 1 ) );
+
+            var multiAtlas = UnityTypes.TMP_FontAsset_Properties.IsMultiAtlasTexturesEnabled;
+            var multiAtlasField = UnityTypes.TMP_FontAsset_Properties.IsMultiAtlasTexturesEnabledField;
+            if( multiAtlas != null ) multiAtlas.Set( asset, true );
+            else if( multiAtlasField != null ) multiAtlasField.Set( asset, true );
+            else XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP_FontAsset.isMultiAtlasTexturesEnabled was not resolved; continuing." );
+
+            var readDefinition = UnityTypes.TMP_FontAsset_Methods.ReadFontAssetDefinition;
+            if( readDefinition != null )
+            {
+               try
+               {
+                  XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Calling TMP_FontAsset.ReadFontAssetDefinition()." );
+                  readDefinition.Invoke( asset );
+               }
+               catch( Exception ex )
+               {
+                  XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] TMP_FontAsset.ReadFontAssetDefinition() failed; retaining manually initialized asset." );
+               }
+            }
+            else XuaLogger.AutoTranslator.Info( "[VI-DEBUG] TMP_FontAsset.ReadFontAssetDefinition() was not resolved; continuing." );
+
+            asset.name = Settings.FallbackSystemFontName + " Dynamic Fallback";
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Manual TMP_FontAsset construction completed; name='" + asset.name + "'." );
+            return asset;
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "[VI-DEBUG] Manual TMP_FontAsset construction failed." );
             return null;
          }
       }

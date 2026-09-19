@@ -174,6 +174,14 @@ namespace XUnity.Common.Constants
          public static CachedProperty Version = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "version" );
          public static CachedProperty FallbackFontAssetTable = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "fallbackFontAssetTable" );
          public static CachedProperty AtlasPopulationMode = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "atlasPopulationMode" );
+         public static CachedProperty SourceFontFile = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "sourceFontFile" );
+         public static CachedProperty IsMultiAtlasTexturesEnabled = UnityTypes.TMP_FontAsset?.ClrType.CachedProperty( "isMultiAtlasTexturesEnabled" );
+
+         // Some TMP versions expose these as serialized fields rather than properties.
+         public static CachedField SourceFontFileField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_SourceFontFile" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "sourceFontFile" );
+         public static CachedField IsMultiAtlasTexturesEnabledField = UnityTypes.TMP_FontAsset?.ClrType.CachedField( "m_IsMultiAtlasTexturesEnabled" )
+            ?? UnityTypes.TMP_FontAsset?.ClrType.CachedField( "isMultiAtlasTexturesEnabled" );
       }
 
       public static class AdvScenarioData_Properties
@@ -347,6 +355,7 @@ namespace XUnity.Common.Constants
          public static MethodInfo CreateFontAssetFromFont = ResolveCreateFontAssetFromFont();
 
          public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ), typeof( bool ), typeof( bool ) );
+         public static CachedMethod ReadFontAssetDefinition = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "ReadFontAssetDefinition" );
       }
 
       private static MethodInfo ResolveCreateFontAssetFromFont()
