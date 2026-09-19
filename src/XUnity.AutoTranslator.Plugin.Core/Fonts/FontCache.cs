@@ -491,7 +491,14 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
 
       private static IEnumerable<string> GetFontFileCandidates()
       {
-         var fonts = Environment.GetFolderPath( Environment.SpecialFolder.Fonts );
+         // Environment.SpecialFolder.Fonts is not available in the net35
+         // reference assemblies used by the managed plugin. WINDIR is
+         // available on supported Windows runtimes and keeps this path
+         // compatible with both net35 and net6.0.
+         var windows = Environment.GetEnvironmentVariable( "WINDIR" );
+         if( windows.IsNullOrWhiteSpace() )
+            windows = Environment.GetFolderPath( Environment.SpecialFolder.Windows );
+         var fonts = windows.IsNullOrWhiteSpace() ? null : Path.Combine( windows, "Fonts" );
          if( fonts.IsNullOrWhiteSpace() ) yield break;
          var name = Settings.FallbackSystemFontName ?? "";
          var compact = new string( name.Where( char.IsLetterOrDigit ).ToArray() );
