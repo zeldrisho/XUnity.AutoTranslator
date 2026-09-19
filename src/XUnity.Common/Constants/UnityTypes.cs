@@ -341,8 +341,75 @@ namespace XUnity.Common.Constants
       public static class TMP_FontAsset_Methods
       {
          public static CachedMethod CreateFontAsset = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( string ), typeof( string ), typeof( int ) );
-         public static CachedMethod CreateFontAssetFromFont = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "CreateFontAsset", typeof( UnityEngine.Font ) );
+
+         // Do not bind this to the old one-argument overload.  Recent TMP versions
+         // only expose the factory with its atlas configuration arguments.
+         public static MethodInfo CreateFontAssetFromFont = ResolveCreateFontAssetFromFont();
+
          public static CachedMethod HasCharacter = UnityTypes.TMP_FontAsset?.ClrType.CachedMethod( "HasCharacter", typeof( char ), typeof( bool ), typeof( bool ) );
+      }
+
+      private static MethodInfo ResolveCreateFontAssetFromFont()
+      {
+         var type = TMP_FontAsset?.ClrType;
+         if( type == null ) return null;
+
+         try
+         {
+            var methods = type.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static )
+               .Where( x => x.Name == "CreateFontAsset" )
+               .ToArray();
+            foreach( var method in methods )
+            {
+               XuaLogger.AutoTranslator.Info( "TMP_FontAsset.CreateFontAsset overload: " + method );
+            }
+
+            // Prefer the overload with the fewest arguments; this remains compatible
+            // with both the legacy one-argument factory and newer TMP factories.
+            return methods.Where( x => x.GetParameters().Length > 0
+                  && x.GetParameters()[ 0 ].ParameterType == typeof( UnityEngine.Font ) )
+               .OrderBy( x => x.GetParameters().Length )
+               .FirstOrDefault();
+         }
+         catch( Exception ex )
+         {
+            XuaLogger.AutoTranslator.Warn( ex, "Unable to resolve TMP_FontAsset.CreateFontAsset(Font) overloads." );
+            return null;
+         }
+      }
+
+      public static object[] CreateFontAssetFromFontArguments( MethodInfo method, UnityEngine.Font font )
+      {
+         var parameters = method.GetParameters();
+         var arguments = new object[ parameters.Length ];
+         arguments[ 0 ] = font;
+         var intArgument = 0;
+         var enumArgument = 0;
+         for( var i = 1; i < parameters.Length; i++ )
+         {
+            var parameter = parameters[ i ];
+            var type = parameter.ParameterType;
+            if( parameter.IsOptional && parameter.DefaultValue != null && parameter.DefaultValue != DBNull.Value )
+               arguments[ i ] = parameter.DefaultValue;
+            else if( type == typeof( int ) )
+            {
+               var name = parameter.Name == null ? "" : parameter.Name.ToLowerInvariant();
+               arguments[ i ] = name.Contains( "padding" ) || intArgument == 1 ? 9 : ( name.Contains( "width" ) || name.Contains( "height" ) || intArgument > 1 ? 1024 : 90 );
+               intArgument++;
+            }
+            else if( type == typeof( bool ) )
+               arguments[ i ] = true;
+            else if( type.IsEnum )
+            {
+               var valueName = parameter.Name != null && parameter.Name.ToLowerInvariant().Contains( "population" ) || enumArgument > 0 ? "Dynamic" : "SDFAA";
+               enumArgument++;
+               try { arguments[ i ] = Enum.Parse( type, valueName, true ); }
+               catch { arguments[ i ] = Activator.CreateInstance( type ); }
+            }
+            else
+               arguments[ i ] = type.IsValueType ? Activator.CreateInstance( type ) : null;
+         }
+         return arguments;
       }
 
       public static class TMP_Text_Methods

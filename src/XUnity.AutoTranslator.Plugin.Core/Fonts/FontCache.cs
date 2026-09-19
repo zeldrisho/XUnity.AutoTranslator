@@ -88,14 +88,14 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Returning cached fallback system TMP font: null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
             return FallbackSystemFontTextMeshPro;
          }
-         _hasReadFallbackSystemFont = true;
-
          var createFontAssetFromFont = UnityTypes.TMP_FontAsset_Methods.CreateFontAssetFromFont;
          XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Fallback prerequisites: configured name blank=" + Settings.FallbackSystemFontName.IsNullOrWhiteSpace()
             + "; CreateFontAsset(Font) reflection handle null=" + ( createFontAssetFromFont == null ) + "." );
          if( Settings.FallbackSystemFontName.IsNullOrWhiteSpace() || createFontAssetFromFont == null )
          {
-            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] Fallback system font creation stopped before OS font creation; _hasReadFallbackSystemFont is now true, so this null result is cached." );
+            // These are definitive failures, so it is safe to cache the null result.
+            _hasReadFallbackSystemFont = true;
+            XuaLogger.AutoTranslator.Warn( "[VI-DEBUG] No usable TMP_FontAsset.CreateFontAsset(Font) overload was found; fallback creation is disabled." );
             return null;
          }
 
@@ -107,6 +107,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             if( installedNames == null || !installedNames.Any( x => string.Equals( x, requestedName, StringComparison.OrdinalIgnoreCase ) ) )
             {
                XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + requestedName );
+               _hasReadFallbackSystemFont = true;
                return null;
             }
 
@@ -115,13 +116,15 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             if( font == null )
             {
                XuaLogger.AutoTranslator.Warn( "The configured fallback system font was not found: " + Settings.FallbackSystemFontName );
+               _hasReadFallbackSystemFont = true;
                return null;
             }
 
             try
             {
-               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset(UnityEngine.Font)." );
-               FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, new object[] { font } );
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Invoking TMP_FontAsset.CreateFontAsset overload: " + createFontAssetFromFont );
+               var arguments = UnityTypes.CreateFontAssetFromFontArguments( createFontAssetFromFont, font );
+               FallbackSystemFontTextMeshPro = (UnityEngine.Object)createFontAssetFromFont.Invoke( null, arguments );
                XuaLogger.AutoTranslator.Info( "[VI-DEBUG] CreateFontAsset(Font) invocation completed; returned null=" + ( FallbackSystemFontTextMeshPro == null ) + "." );
             }
             catch( Exception ex )
@@ -129,16 +132,36 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
                XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] CreateFontAsset(Font) invocation failed. InnerException: "
                   + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
                FallbackSystemFontTextMeshPro = null;
+               _hasReadFallbackSystemFont = true;
                return null;
+            }
+
+            if( FallbackSystemFontTextMeshPro != null )
+            {
+               var atlasPopulationMode = UnityTypes.TMP_FontAsset_Properties.AtlasPopulationMode;
+               if( atlasPopulationMode != null && atlasPopulationMode.PropertyType.IsEnum )
+               {
+                  try
+                  {
+                     atlasPopulationMode.Set( FallbackSystemFontTextMeshPro,
+                        Enum.Parse( atlasPopulationMode.PropertyType, "Dynamic", true ) );
+                  }
+                  catch( Exception ex )
+                  {
+                     XuaLogger.AutoTranslator.Warn( ex, "Unable to set dynamic TMP atlas population mode." );
+                  }
+               }
             }
 
             LogFallbackSystemFontDiagnostics( FallbackSystemFontTextMeshPro );
             if( FallbackSystemFontTextMeshPro == null )
             {
+               _hasReadFallbackSystemFont = true;
                XuaLogger.AutoTranslator.Warn( "This TextMeshPro version cannot create a dynamic font asset from an OS font." );
                return null;
             }
 
+            _hasReadFallbackSystemFont = true;
             GameObject.DontDestroyOnLoad( font );
             GameObject.DontDestroyOnLoad( FallbackSystemFontTextMeshPro );
             return FallbackSystemFontTextMeshPro;
@@ -148,6 +171,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             XuaLogger.AutoTranslator.Error( ex, "[VI-DEBUG] Unable to create the configured system fallback font. InnerException: "
                + ( ex.InnerException == null ? "<none>" : ex.InnerException.ToString() ) );
             FallbackSystemFontTextMeshPro = null;
+            _hasReadFallbackSystemFont = true;
             return null;
          }
       }
