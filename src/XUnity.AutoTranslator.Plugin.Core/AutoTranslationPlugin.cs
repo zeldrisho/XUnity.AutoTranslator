@@ -937,6 +937,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
                }
 
                // NGUI only behaves if you set the text after the resize behaviour
+               XuaLogger.AutoTranslator.Info( $"[VI-DEBUG] SetText called. isTranslated={isTranslated}, info null={info == null}, text={text}" );
                if( isTranslated ) info?.EnsureTextMeshProFallback( ui, text );
                ui.SetText( text, info );
 

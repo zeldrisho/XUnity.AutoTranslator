@@ -83,6 +83,7 @@ namespace XUnity.AutoTranslator.Plugin.Core
       /// <param name="text">The translated text whose characters must be supported.</param>
       public void EnsureTextMeshProFallback( object ui, string text )
       {
+         XuaLogger.AutoTranslator.Info( "[VI-DEBUG] EnsureTextMeshProFallback ENTERED for text: " + text );
          if( ui == null || string.IsNullOrEmpty( text ) || Settings.FallbackSystemFontName.IsNullOrWhiteSpace() ) return;
 
          var type = ui.GetUnityType();
@@ -94,9 +95,19 @@ namespace XUnity.AutoTranslator.Plugin.Core
             var font = ui.GetType().CachedProperty( "font" ).Get( ui );
             if( font == null ) return;
 
+            var primaryFontObject = font as UnityEngine.Object;
+            var primaryFontName = primaryFontObject != null ? primaryFontObject.name : font.GetType().FullName;
+            XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Primary TMP font asset: " + primaryFontName );
+
             bool missing = UnityTypes.TMP_FontAsset_Methods.HasCharacter == null;
             if( !missing )
             {
+               foreach( var character in new[] { 'ế', 'ệ', 'ắ' } )
+               {
+                  XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Primary TMP font HasCharacter('" + character + "', false, false): "
+                     + UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character, false, false } ) );
+               }
+
                foreach( var character in text )
                {
                   if( !char.IsControl( character ) && !(bool)UnityTypes.TMP_FontAsset_Methods.HasCharacter.Invoke( font, new object[] { character, false, false } ) )
@@ -106,7 +117,11 @@ namespace XUnity.AutoTranslator.Plugin.Core
                   }
                }
             }
-            if( !missing ) return;
+            if( !missing )
+            {
+               XuaLogger.AutoTranslator.Info( "[VI-DEBUG] EnsureTextMeshProFallback returning early: primary TMP font reports all text characters are present." );
+               return;
+            }
 
             var fallback = FontCache.GetOrCreateFallbackSystemFontTextMeshPro();
             if( fallback == null ) return;
