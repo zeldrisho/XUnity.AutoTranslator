@@ -263,22 +263,21 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          const int atlasSize = 1024;
          try
          {
-            var properties = UnityTypes.TMP_FontAsset_Properties;
-            SetCollection( properties.CharacterTable, asset );
-            SetCollection( properties.GlyphTable, asset );
-            SetCollection( properties.CharacterLookupTable, asset );
-            SetCollection( properties.GlyphLookupTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.CharacterTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.GlyphTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.CharacterLookupTable, asset );
+            SetCollection( UnityTypes.TMP_FontAsset_Properties.GlyphLookupTable, asset );
 
             var texture = new Texture2D( atlasSize, atlasSize, TextureFormat.Alpha8, false );
             texture.name = "XUnity AutoTranslator Dynamic TMP Atlas";
-            SetAtlas( properties.AtlasTextures, asset, texture );
-            SetField( properties.AtlasTexture, asset, texture );
-            SetField( properties.AtlasWidth, asset, atlasSize );
-            SetField( properties.AtlasHeight, asset, atlasSize );
+            SetAtlas( UnityTypes.TMP_FontAsset_Properties.AtlasTextures, asset, texture );
+            SetField( UnityTypes.TMP_FontAsset_Properties.AtlasTexture, asset, texture );
+            SetField( UnityTypes.TMP_FontAsset_Properties.AtlasWidth, asset, atlasSize );
+            SetField( UnityTypes.TMP_FontAsset_Properties.AtlasHeight, asset, atlasSize );
             PopulateFaceInfo( asset, sourceFont );
 
             XuaLogger.AutoTranslator.Info( "[VI-DEBUG] Bootstrapped TMP tables and atlas; atlasTextures valid="
-               + HasValidAtlasTexture( properties.AtlasTextures?.Get( asset ) ) + "." );
+               + HasValidAtlasTexture( UnityTypes.TMP_FontAsset_Properties.AtlasTextures?.Get( asset ) ) + "." );
          }
          catch( Exception ex )
          {
