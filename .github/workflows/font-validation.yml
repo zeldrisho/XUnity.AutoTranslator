@@ -29,8 +29,8 @@ jobs:
           if (-not $msbuild) { throw 'Visual Studio MSBuild was not found.' }
           & $msbuild XUnity.AutoTranslator.sln /m:1 /t:Build /p:Configuration=Release /p:Platform='Any CPU'
           if ($LASTEXITCODE -ne 0) { throw "MSBuild failed: $LASTEXITCODE" }
-      - name: Test font API discovery
-        run: dotnet test test/XUnity.AutoTranslator.Plugin.Core.Tests/XUnity.AutoTranslator.Plugin.Core.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~FontCreationTests
+      - name: Test font API discovery and matching
+        run: dotnet test test/XUnity.AutoTranslator.Plugin.Core.Tests/XUnity.AutoTranslator.Plugin.Core.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~FontCreationTests|FullyQualifiedName~FontSyncTests'
       - name: Read package version
         shell: pwsh
         run: |

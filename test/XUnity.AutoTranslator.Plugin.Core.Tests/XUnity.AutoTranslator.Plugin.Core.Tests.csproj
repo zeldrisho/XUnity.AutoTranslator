@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\XUnity.AutoTranslator.Plugin.BepInEx\FontSync\FontRules.cs" Link="FontSync\FontRules.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="UnityEngine">
       <HintPath>..\..\libs\UnityEngine.dll</HintPath>
     </Reference>

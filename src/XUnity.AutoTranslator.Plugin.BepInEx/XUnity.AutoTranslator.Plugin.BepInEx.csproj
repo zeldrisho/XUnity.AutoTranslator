@@ -19,6 +19,8 @@
 	</ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<MakeDir Directories="$(SolutionDir)dist\BepInEx\BepInEx\plugins\XUnity.AutoTranslator" Condition="'$(Configuration)'=='Release'" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\FontSync\LICENSE.txt" DestinationFiles="$(SolutionDir)dist\BepInEx\BepInEx\plugins\XUnity.AutoTranslator\FontSync-LICENSE.txt" Condition="'$(Configuration)'=='Release'" />
 		<GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
 			<Output TaskParameter="Assemblies" ItemName="Targets" />
 		</GetAssemblyIdentity>

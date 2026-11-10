@@ -491,6 +491,12 @@ When translating to languages that use non-ASCII letters the game's default font
 
 These settings are not affected by `EnableUIResizing` and `ForceUIResizing`, but the resizing behavior may change how the custom font is displayed.
 
+##### BepInEx 5: per-font synchronization
+
+The BepInEx 5 package also includes the font matching functionality from [UnityVietnameseFontSync](https://github.com/zeldrisho/UnityVietnameseFontSync). It uses `BepInEx/config/zeldrisho.UnityVietnameseFontSync.cfg`, including existing profiles and rules; remove the standalone plugin before using it. The default configuration contains no matching rules and does not modify fonts. See its [configuration guide](https://github.com/zeldrisho/UnityVietnameseFontSync/blob/main/docs/configuration.md) for profiles, ordered rules, font files, and fallback chains. This functionality is limited to compatible Mono/TMP games; it is not available in the IL2CPP package.
+
+For synchronized fonts, leave `OverrideFontTextMeshPro` and `FallbackFontTextMeshPro` empty to avoid conflicting font changes. `Synchronize` clears the matched font asset's character table in memory: use narrowly targeted rules, check symbols and layout, and restart without those rules to restore the original assets.
+
 ##### Where to get custom fonts
 - You can download some pre-built asset bundles with TextMeshPro fonts in the release tab (TMP_Font_AssetBundles), but for now, they are not particularly well tested. If you want to try them out, simply download the .zip folder and put one of the font assets into the game folder. Then configure it up by writing the name of the file in the configuration file in `OverrideFontTextMeshPro` or `FallbackFontTextMeshPro`.
 - [sorrowmoil-MoeFont-for-XUnity.AutoTranslator](https://github.com/sorrowmoil/sorrowmoil-MoeFont-for-XUnity.AutoTranslator) - Repository full of fonts for various versions of Unity (zh-CN), more information in https://github.com/bbepis/XUnity.AutoTranslator/issues/842.
