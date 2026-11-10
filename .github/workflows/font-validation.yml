@@ -1,0 +1,39 @@
+name: Font validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore XUnity.AutoTranslator.sln
+      - name: Build release packages
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild/**/Bin/MSBuild.exe' | Select-Object -First 1
+          if (-not $msbuild) { throw 'Visual Studio MSBuild was not found.' }
+          & $msbuild XUnity.AutoTranslator.sln /m:1 /t:Build /p:Configuration=Release /p:Platform='Any CPU'
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild failed: $LASTEXITCODE" }
+      - name: Test font API discovery
+        run: dotnet test test/XUnity.AutoTranslator.Plugin.Core.Tests/XUnity.AutoTranslator.Plugin.Core.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~FontCreationTests
+      - name: Upload packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: XUnity.AutoTranslator-packages
+          path: dist/*.zip
+          if-no-files-found: error
