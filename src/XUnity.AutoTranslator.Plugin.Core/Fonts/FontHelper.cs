@@ -167,7 +167,11 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
          args[ 5 ] = 1024;
          args[ 6 ] = Enum.Parse( parameters[ 6 ].ParameterType, "Dynamic" );
          args[ 7 ] = true;
-         for( int i = 8; i < args.Length; i++ ) args[ i ] = parameters[ i ].DefaultValue;
+         for( int i = 8; i < args.Length; i++ )
+         {
+            var value = parameters[ i ].DefaultValue;
+            args[ i ] = value == DBNull.Value || value == Missing.Value ? Type.Missing : value;
+         }
 
          var source = Font.CreateDynamicFontFromOSFont( fontName, 90 );
          if( source == null ) return null;
@@ -177,7 +181,7 @@ namespace XUnity.AutoTranslator.Plugin.Core.Fonts
             var result = (UnityEngine.Object)method.Invoke( null, args );
             if( result != null )
             {
-               GameObject.DontDestroyOnLoad( source );
+               source.hideFlags |= HideFlags.DontUnloadUnusedAsset;
                return result;
             }
          }

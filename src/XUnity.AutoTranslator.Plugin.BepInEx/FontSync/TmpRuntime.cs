@@ -73,7 +73,11 @@ namespace UnityVietnameseFontSync
             object[] required = { source, size, padding, Enum.Parse(parameters[3].ParameterType, "SDFAA"),
                 atlas, atlas, Enum.Parse(_mode.PropertyType, "Dynamic"), multiAtlas };
             Array.Copy(required, arguments, required.Length);
-            for (int i = required.Length; i < arguments.Length; i++) arguments[i] = parameters[i].DefaultValue;
+            for (int i = required.Length; i < arguments.Length; i++)
+            {
+                object value = parameters[i].DefaultValue;
+                arguments[i] = value == DBNull.Value || value == Missing.Value ? Type.Missing : value;
+            }
             return _create.Invoke(null, arguments);
         }
 
