@@ -99,7 +99,8 @@ namespace UnityVietnameseFontSync
                 uint[] remaining = _settings.Characters;
                 for (int i = 0; i < files.Count && remaining.Length > 0; i++)
                 {
-                    string path = FontRules.ResolvePath(files[i], Environment.GetFolderPath(Environment.SpecialFolder.Fonts), directory);
+                    string windows = Environment.GetEnvironmentVariable("WINDIR") ?? "";
+                    string path = FontRules.ResolvePath(files[i], Path.Combine(windows, "Fonts"), directory);
                     if (!File.Exists(path)) throw new FileNotFoundException("Font file not found", path);
                     Font source = new Font(path);
                     Own(source);
