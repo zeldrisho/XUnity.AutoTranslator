@@ -5,7 +5,6 @@ using System.IO;
 using BepInEx;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using XUnity.Common.Constants;
 using Object = UnityEngine.Object;
 
 namespace UnityVietnameseFontSync
@@ -21,7 +20,7 @@ namespace UnityVietnameseFontSync
         private readonly HashSet<Object> _reported = new HashSet<Object>();
         private readonly Dictionary<Object, float> _retry = new Dictionary<Object, float>();
         private float _nextScan;
-        private bool _ready, _assetsInstalled, _apiWarningLogged, _firstFontScanLogged;
+        private bool _ready, _assetsInstalled, _apiWarningLogged, _firstFontScanLogged, _sceneSubscribed;
 
         /// <summary>
         /// Loads configuration and initializes scanning, logging configuration failures without propagating them.
@@ -70,7 +69,7 @@ namespace UnityVietnameseFontSync
                 return;
             }
             _ready = true;
-            if (UnityFeatures.SupportsSceneManager) SubscribeSceneLoaded();
+            if (SupportsSceneLoaded()) { SubscribeSceneLoaded(); _sceneSubscribed = true; }
             Logger.LogInfo("Runtime scanning initialized.");
             Scan();
         }
@@ -88,6 +87,16 @@ namespace UnityVietnameseFontSync
         /// Scans for newly loaded font assets after a scene load.
         /// </summary>
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode) { Scan(); }
+
+        private static bool SupportsSceneLoaded()
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType("UnityEngine.SceneManagement.SceneManager", false);
+                if (type != null) return type.GetEvent("sceneLoaded") != null;
+            }
+            return false;
+        }
 
         private void SubscribeSceneLoaded() { SceneManager.sceneLoaded += OnSceneLoaded; }
         private void UnsubscribeSceneLoaded() { SceneManager.sceneLoaded -= OnSceneLoaded; }
@@ -277,7 +286,7 @@ namespace UnityVietnameseFontSync
         /// </summary>
         private void OnDestroy()
         {
-            if (_ready && UnityFeatures.SupportsSceneManager) UnsubscribeSceneLoaded();
+            if (_sceneSubscribed) UnsubscribeSceneLoaded();
             bool restored = true;
             foreach (var pair in _patched)
             {
